@@ -16,21 +16,89 @@
 
   <h2>Posts</h2>
   <% for (const post of posts) { %>
-    <h3>Anonymous</h3> <img src="<%= post.imageUrl %>" alt="Post image">
-    <p><%= post.description %></p>
-    <h4>Comments:</h4>
-    <ul>
-      <% for (const comment of post.comments) { %>
-        <li><%= comment %></li>
-      <% } %>
-    </ul>
-    <form class="comment-form" data-post-id="<%= post.id %>">
-      <label for="comment">Add a comment:</label>
-      <input type="text" name="comment" id="comment" required>
-      <button type="submit">Submit Comment</button>
-    </form>
+    <div class="post">
+      <h3>User</h3>
+      <img src="<%= post.imageUrl %>" alt="Post image">
+      <p><%= post.description %></p>
+      <h4>Comments:</h4>
+      <ul class="comments" data-post-id="<%= post.id %>">
+        <% if (post.comments && post.comments.length > 0) { %>
+          <% for (const comment of post.comments) { %>
+            <li><%= comment.content %></li>
+          <% } %>
+        <% } else { %>
+          <li>No comments yet.</li>
+        <% } %>
+      </ul>
+      <div class="comment-section">
+        <form class="comment-form" data-post-id="<%= post.id %>">
+          <label for="comment">Add a comment:</label>
+          <input type="text" name="comment" required>
+          <button type="submit">Submit Comment</button>
+        </form>
+      </div>
+    </div>
     <hr>
   <% } %>
-  <script src="script.js"></script>
+
+  <script>
+    // Handle comment form submission using event delegation
+    document.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      if (event.target.classList.contains('comment-form')) {
+        const form = event.target;
+        const postId = form.dataset.postId;
+        const commentContent = form.querySelector('input[name="comment"]').value;
+
+        try {
+          const response = await fetch(`/create-comment`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ postId, content: commentContent })
+          });
+
+          if (response.ok) {
+            // Clear comment input and refetch comments for updated display
+            form.querySelector('input[name="comment"]').value = '';
+            fetchComments(postId);
+          } else {
+            console.error('Error creating comment');
+            alert('Failed to add comment. Please try again.');
+          }
+        } catch (error) {
+          console.error('Error submitting comment:', error);
+          // Handle submission error (e.g., display error message)
+        }
+      }
+    });
+
+    async function fetchComments(postId) {
+      try {
+        const response = await fetch(`/comments/${postId}`);
+        const comments = await response.json();
+
+        const commentList = document.querySelector(`.comments[data-post-id="${postId}"]`);
+        commentList.innerHTML = ''; // Clear existing comments
+
+        if (Array.isArray(comments)) {
+          // Comments is an array of comments
+          comments.forEach(comment => {
+            const commentElement = document.createElement('li');
+            commentElement.textContent = comment.content;
+            commentList.appendChild(commentElement);
+          });
+        } else {
+          // Comments is a single comment object (unlikely in this case)
+          const commentElement = document.createElement('li');
+          commentElement.textContent = comments.content;
+          commentList.appendChild(commentElement);
+        }
+      } catch (error) {
+        console.error('Error fetching comments:', error);
+        // Handle fetching error (e.g., display error message)
+      }
+    }
+  </script>
 </body>
 </html>
