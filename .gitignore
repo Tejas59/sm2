@@ -32,9 +32,7 @@ npm-debug.log*
 /jspm_packages/
 /bower_components/
 
-# Typescript compiled output
-*.js
-*.js.map
+
 
 # Coverage directory used by tools like istanbul
 /coverage
