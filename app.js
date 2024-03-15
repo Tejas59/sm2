@@ -10,7 +10,7 @@ const port = 3000;
 const pool = mysql2.createPool({
   host: 'localhost',
   user: 'root',
-  password: 'Tejas@555',
+  password: 'Tejas@555', // Replace with your actual password
   database: 'social_media'
 });
 
@@ -23,28 +23,26 @@ app.set('view engine', 'ejs');
 app.set('views', './public');
 
 // Routes
+
+// Get all posts and display them
 app.get('/', async (req, res) => {
   try {
     const [posts] = await pool.query(`
-      SELECT p.*,
-             (SELECT JSON_ARRAYAGG(JSON_OBJECT('content', c.content, 'created_at', c.created_at)) AS comments
-              FROM comments c
-              WHERE c.post_id = p.id) AS post_comments
+      SELECT p.*, c.content AS comment_content
       FROM posts p
-      GROUP BY p.id
+      LEFT JOIN comments c ON p.id = c.post_id
       ORDER BY p.created_at DESC;
     `);
 
-    console.log("Posts from database:", posts); // Log the posts data
-
-    const formattedPosts = posts.map(post => ({
-      id: post.id,
-      imageUrl: post.imageUrl,
-      description: post.description,
-      comments: post.post_comments ? post.post_comments : [] // Use post_comments object directly
-    }));
-
-    console.log("Formatted posts:", formattedPosts); // Log the formatted posts data
+    const formattedPosts = posts.reduce((acc, post) => {
+      const existingPost = acc.find(p => p.id === post.id);
+      if (existingPost) {
+        existingPost.comments.push(post.comment_content);
+      } else {
+        acc.push({ id: post.id, username: 'Anonymous', imageUrl: post.imageUrl, description: post.description, comments: [post.comment_content] });
+      }
+      return acc;
+    }, []);
 
     res.render('index', { posts: formattedPosts });
   } catch (error) {
@@ -53,6 +51,19 @@ app.get('/', async (req, res) => {
   }
 });
 
+// Create a new post
+app.post('/create-post', async (req, res) => {
+  const { imageUrl, description } = req.body;
+  try {
+    const [result] = await pool.query('INSERT INTO posts (username, imageUrl, description) VALUES (?, ?, ?)', ['Anonymous', imageUrl, description]);
+    res.redirect('/'); // Redirect to homepage after successful post creation
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Error creating post');
+  }
+});
+
+// Create a new comment
 app.post('/create-comment', async (req, res) => {
   const { postId, content } = req.body;
 
