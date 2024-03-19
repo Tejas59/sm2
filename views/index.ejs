@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social App</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+  <div class="container mt-5">
+    <h1 class="mb-4">Social Feed</h1>
+    <form id="create-post-form" action="/create-post" method="POST">
+      <div class="form-group">
+        <label for="imageUrl">Image URL:</label>
+        <input type="text" class="form-control" name="imageUrl" id="imageUrl" required>
+      </div>
+      <div class="form-group">
+        <label for="description">Description:</label>
+        <textarea class="form-control" name="description" id="description" required></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary">Submit Post</button>
+    </form>
+
+    <h2 class="mt-5">Posts</h2>
+    <div class="posts">
+      <% for (const post of posts) { %>
+        <div class="post card my-4 w-50 h-50 mx-auto">
+          <div class="card-body ">
+            <h3 class="card-title">Anonymous</h3>
+            <img src="<%= post.imageUrl %>" class="card-img-top " alt="Post image">
+            <p class="card-text mt-3"><%= post.description %></p>
+            <h4 class="card-title">Comments:</h4>
+            <ul class="comments" data-post-id="<%= post.id %>">
+              <% for (const comment of post.comments) { %>
+                <!-- <h5 class="comment-user">User</h5> -->
+                <li class="card-text"><%= comment %></li>
+              <% } %>
+            </ul>
+            <div class="comment-section">
+              <form class="comment-form" data-post-id="<%= post.id %>">
+                <div class="form-group">
+                  <label for="comment">Add a comment:</label>
+                  <input type="text" class="form-control" name="comment" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Submit Comment</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script> -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const commentForms = document.querySelectorAll('.comment-form');
+      
+      commentForms.forEach(form => {
+        form.addEventListener('submit', async (event) => {
+          event.preventDefault(); 
+  
+          const postId = form.dataset.postId;
+          const commentContent = form.querySelector('input[name="comment"]').value;
+  
+          try {
+            const response = await fetch('/create-comment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ postId, content: commentContent })
+            });
+  
+            if (response.ok) {
+              console.log('Comment added successfully');
+              form.querySelector('input[name="comment"]').value = ''; 
+              fetchComments(postId); 
+            } else {
+              console.error('Error adding comment:', response.statusText);
+              
+            }
+          } catch (error) {
+            console.error('Error adding comment:', error.message);
+          }
+        });
+      });
+    });
+  
+    async function fetchComments(postId) {
+      try {
+        const response = await fetch(`/comments/${postId}`);
+        if (response.ok) {
+          const comments = await response.json();
+          updateCommentsUI(postId, comments); 
+        } else {
+          console.error('Error fetching comments:', response.statusText);
+          
+        }
+      } catch (error) {
+        console.error('Error fetching comments:', error.message);
+        
+      }
+    }
+  
+    function updateCommentsUI(postId, comments) {
+      const commentList = document.querySelector(`.comments[data-post-id="${postId}"]`);
+      commentList.innerHTML = ''; 
+  
+      comments.forEach(comment => {
+        const commentElement = document.createElement('li');
+        commentElement.textContent = comment.content;
+        commentList.appendChild(commentElement);
+      });
+    }
+  </script>
+  
+</body>
+</html>
